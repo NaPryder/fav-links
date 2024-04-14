@@ -6,11 +6,60 @@ from django.contrib.auth import login, logout, authenticate
 import re
 
 
-class UserSerializer(serializers.ModelSerializer):
+class UserInfoSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ["url", "username", "is_staff"]
-        read_only_fields = ["is_staff"]
+        # fields = ["url", "username", "password", "is_staff"]
+        # read_only_fields = ["url", "is_staff"]
+        fields = ["username", "is_staff", "email"]
+        read_only_fields = fields
+
+
+class UserChangePasswordSerializer(serializers.ModelSerializer):
+
+    username = serializers.CharField(
+        max_length=20, min_length=8, help_text="must be between 8 and 20 characters"
+    )
+    old_password = serializers.CharField(
+        max_length=20,
+        min_length=8,
+        write_only=True,
+    )
+    new_password = serializers.CharField(
+        max_length=20,
+        min_length=8,
+        help_text="must be between 8 and 20 characters",
+        write_only=True,
+    )
+    new_password_2 = serializers.CharField(
+        max_length=20,
+        min_length=8,
+        help_text="must be same as New password",
+        write_only=True,
+    )
+
+    class Meta:
+        model = User
+        fields = ["username", "old_password", "new_password", "new_password_2"]
+        read_only_fields = ["username"]
+
+    def validate_old_password(self, password):
+        validators.validate_password(password)
+        return password
+
+    def validate_new_password(self, password):
+        validators.validate_password(password)
+        return password
+
+    def validate_new_password_2(self, password):
+        validators.validate_password(password)
+        return password
+
+    def validate(self, attrs):
+        print("---validate all")
+        raise ValidationError("test")
+
+        return attrs
 
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
@@ -19,16 +68,15 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         max_length=20, min_length=8, help_text="must be between 8 and 20 characters"
     )
     password = serializers.CharField(
-        max_length=20, min_length=8, help_text="must be between 8 and 20 characters"
+        max_length=20,
+        min_length=8,
+        help_text="must be between 8 and 20 characters",
+        write_only=True,
     )
 
     class Meta:
         model = User
-        fields = ["username", "password"]
-        extra_kwargs = {
-            "password": {"write_only": True},
-            # "username": {"help_text": "You help text here..."},
-        }
+        fields = ["url", "username", "password"]
 
     def validate_username(self, username):
         pattern = r"^(?![-._])(?!.*[_.-]{2})[\w.-]{8,20}(?<![-._])$"
@@ -47,13 +95,18 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         return password
 
     def create(self, validated_data):
-        return User.objects.create(**validated_data)
+        password = validated_data.pop("password", None)
+        user = self.Meta.model(**validated_data)
+
+        if password is not None:
+            user.set_password(password)
+        user.save()
+        return user
 
 
 class SessionLoginSerializer(serializers.ModelSerializer):
     username = serializers.CharField()
     password = serializers.CharField(write_only=True)
-    # token = None
 
     class Meta:
         model = User
@@ -62,29 +115,20 @@ class SessionLoginSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         username = attrs.get("username")
         password = attrs.get("password")
-        print("----validate", attrs)
         if username and password:
-            print("---request", self.context.get("request"))
-            user1 = User.objects.get_by_natural_key(username=username)
-            print("--user1", user1)
-            valid = user1.check_password(raw_password=password)
-            print("--valid", valid)
-
             user = authenticate(
                 request=self.context.get("request"),
                 username=username,
                 password=password,
             )
-            print("--user", user)
 
             if not user:
-                # msg = _("Unable to log in with provided credentials.")
                 msg = "Unable to log in with provided credentials."
                 raise serializers.ValidationError(msg, code="authorization")
         else:
-            # msg = _('Must include "username" and "password".')
             msg = 'Must include "username" and "password".'
             raise serializers.ValidationError(msg, code="authorization")
 
         attrs["user"] = user
+
         return attrs
