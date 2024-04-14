@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 
+from datetime import timedelta
 from pathlib import Path
 import environ
 
@@ -25,8 +26,13 @@ env.read_env(env_file=str(BASE_DIR / ".env"))
 print("================================ Start")
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-2($1mag4#7%*2snx4_&@u33c7ne25ls#b(7(x$^j#-ebar06=s"
+# SECRET_KEY = "django-insecure-2($1mag4#7%*2snx4_&@u33c7ne25ls#b(7(x$^j#-ebar06=s"
 
+SECRET_KEY = env(
+    "SECRET_KEY",
+    str,
+    "django-insecure-2($1mag4#7%*2snx4_&@u33c7ne25ls#b(7(x$^j#-ebar06=s",
+)
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env("DEBUG", bool, True)
@@ -35,6 +41,7 @@ ALLOWED_HOSTS = []
 # ALLOWED_HOSTS = ["backend", "localhost", "127.0.0.1", "0"]
 
 CSRF_TRUSTED_ORIGINS = ["http://localhost:8000", "http://127.0.0.1:8000"]
+# CSRF_TRUSTED_ORIGINS = []
 SESSION_COOKIE_SECURE = False
 CSRF_COOKIE_SECURE = False
 
@@ -48,6 +55,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "rest_framework",
+    "account",
     "fav_link",
 ]
 
@@ -81,23 +89,34 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "core.wsgi.application"
 
+REST_FRAMEWORK = {
+    # Use Django's standard `django.contrib.auth` permissions,
+    # or allow read-only access for unauthenticated users.
+    "DEFAULT_PERMISSION_CLASSES": [
+        # "rest_framework.permissions.IsAuthenticated",
+        "rest_framework.permissions.DjangoModelPermissionsOrAnonReadOnly",
+    ],
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework.authentication.SessionAuthentication",
+    ],
+}
 
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 
 DATABASES = {
-    # "default": {
-    #     "ENGINE": "django.db.backends.postgresql",
-    #     "NAME": env("DB_NAME", str, "postgres"),
-    #     "USER": env("DB_USER", str, "postgres"),
-    #     "HOST": env("DB_HOST", str, "db"),
-    #     "PORT": env("DB_PORT", int, 5432),
-    #     "PASSWORD": env("DB_PASS", str, ""),
-    # }
     "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": env("DB_NAME", str, "postgres"),
+        "USER": env("DB_USER", str, "postgres"),
+        "HOST": env("DB_HOST", str, "db"),
+        "PORT": env("DB_PORT", int, 5432),
+        "PASSWORD": env("DB_PASS", str, ""),
     }
+    # "default": {
+    #     "ENGINE": "django.db.backends.sqlite3",
+    #     "NAME": BASE_DIR / "db.sqlite3",
+    # }
 }
 
 
@@ -141,15 +160,3 @@ STATIC_URL = "static/"
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
-
-REST_FRAMEWORK = {
-    # Use Django's standard `django.contrib.auth` permissions,
-    # or allow read-only access for unauthenticated users.
-    "DEFAULT_PERMISSION_CLASSES": [
-        "rest_framework.permissions.DjangoModelPermissionsOrAnonReadOnly",
-    ],
-    "DEFAULT_AUTHENTICATION_CLASSES": [
-        # 'rest_framework.authentication.BasicAuthentication',
-        "rest_framework.authentication.SessionAuthentication",
-    ],
-}
