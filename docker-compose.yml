@@ -27,6 +27,8 @@ services:
     environment:
       - DEBUG=True
       - USE_TEMP_DB=False
+    env_file:
+      - .env
     ports:
       - "8000:8000"
     command: python ./manage.py runserver 0.0.0.0:8000
