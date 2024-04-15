@@ -1,18 +1,19 @@
-from django.http import QueryDict
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.response import Response
-from rest_framework import status
 from rest_framework.decorators import action
-from rest_framework.validators import ValidationError
-
 from rest_framework.permissions import IsAuthenticated, BasePermission
+
+from django_filters.rest_framework import DjangoFilterBackend
+
+from fav_link.apps import UPDATING_QUEUES
+from fav_link.filtersets import FavoriteUrlFilter
 from fav_link.models import FavoriteUrl, Tag, Category
+from fav_link.processes import validity_check
 from fav_link.serializers import (
     FavoriteUrlSerializer,
     CategorySerializer,
     TagSerializer,
 )
-from django_filters.rest_framework import DjangoFilterBackend
 
 
 class ObjectOwnerPermission(IsAuthenticated):
@@ -65,7 +66,7 @@ class FavoriteUrlViewSet(ModelViewSet):
     permission_classes = [ObjectOwnerPermission]
 
     filter_backends = [DjangoFilterBackend]
-    filterset_fields = ["category", "tags", "create_at"]
+    filterset_class = FavoriteUrlFilter
 
     def filter_queryset(self, queryset):
         return queryset.filter(owner=self.request.user)
@@ -73,6 +74,11 @@ class FavoriteUrlViewSet(ModelViewSet):
     # def create(self, request, *args, **kwargs):
     #     serializer = self.get_serializer(data=request.data)
     #     serializer.is_valid(raise_exception=True)
+
+    #     print("---validated dat", serializer.validated_data)
+    #     url = serializer.validated_data.get("url")
+    #     print("url", url)
+
     #     self.perform_create(serializer)
     #     headers = self.get_success_headers(serializer.data)
 
@@ -81,3 +87,48 @@ class FavoriteUrlViewSet(ModelViewSet):
     #     return Response(
     #         successful_message, status=status.HTTP_201_CREATED, headers=headers
     #     )
+
+    def update(self, request, *args, **kwargs):
+        print("args", args)
+        print("kwargs", kwargs)
+        import time
+
+        # TODO process update
+        # try:
+        #     res = super().update(request, *args, **kwargs)
+
+        partial = kwargs.pop("partial", False)
+        instance = self.get_object()
+        _id = instance.id
+        timestamp = time.time()
+        UPDATING_QUEUES.append(timestamp)
+        print("---current queue", UPDATING_QUEUES)
+        end = 0
+        while timestamp in UPDATING_QUEUES:
+
+            end += 1
+            time.sleep(0.5)
+
+            if end == 15:
+                print("remove timestamp", timestamp)
+                UPDATING_QUEUES.remove(timestamp)
+                break
+
+        print("----process update", timestamp, _id)
+
+        print(" end UPDATING_QUEUES", UPDATING_QUEUES)
+        # serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        # serializer.is_valid(raise_exception=True)
+        # self.perform_update(serializer)
+
+        # if getattr(instance, '_prefetched_objects_cache', None):
+        #     # If 'prefetch_related' has been applied to a queryset, we need to
+        #     # forcibly invalidate the prefetch cache on the instance.
+        #     instance._prefetched_objects_cache = {}
+
+        # return Response(serializer.data)
+
+        # finally:
+        #     UPDATING_QUEUES.pop()
+
+        return Response("by pass")
