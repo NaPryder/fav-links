@@ -7,7 +7,6 @@ from account.views import (
 )
 
 from rest_framework import routers
-from django.urls import include, path
 
 router = routers.DefaultRouter()
 router.register("login", LoginViewSet, basename="login")
