@@ -90,20 +90,20 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "core.wsgi.application"
 
-REST_FRAMEWORK = {
-    # Use Django's standard `django.contrib.auth` permissions,
-    # or allow read-only access for unauthenticated users.
-    "DEFAULT_PERMISSION_CLASSES": [
-        # "rest_framework.permissions.IsAuthenticated",
+REST_FRAMEWORK = dict(
+    PAGE_SIZE=20,
+    DATE_INPUT_FORMATS=["%Y-%m-%d"],
+    DEFAULT_PERMISSION_CLASSES=[
         "rest_framework.permissions.DjangoModelPermissionsOrAnonReadOnly",
     ],
-    "DEFAULT_AUTHENTICATION_CLASSES": [
+    DEFAULT_AUTHENTICATION_CLASSES=[
         "rest_framework.authentication.SessionAuthentication",
     ],
-    "DEFAULT_FILTER_BACKENDS": ["django_filters.rest_framework.DjangoFilterBackend"],
-    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
-    "PAGE_SIZE": 10,
-}
+    DEFAULT_FILTER_BACKENDS=[
+        "django_filters.rest_framework.DjangoFilterBackend",
+    ],
+    DEFAULT_PAGINATION_CLASS="rest_framework.pagination.PageNumberPagination",
+)
 
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
