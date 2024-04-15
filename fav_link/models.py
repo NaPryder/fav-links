@@ -32,7 +32,15 @@ class FavoriteUrl(models.Model):
     owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name="+")
     url = models.URLField()
     category = models.ForeignKey(
-        Category, on_delete=models.PROTECT, related_name="models"
+        Category,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="models",
     )
-    tags = models.ManyToManyField(Tag)
+    tags = models.ManyToManyField(
+        Tag,
+        null=True,
+        blank=True,
+    )
     create_at = models.DateTimeField(auto_now_add=True)
