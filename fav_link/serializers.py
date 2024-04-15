@@ -1,9 +1,7 @@
 from django.forms import ValidationError
-from rest_framework import serializers, exceptions
+from rest_framework import serializers
 
 from fav_link.models import FavoriteUrl, Tag, Category
-
-from rest_framework.validators import UniqueTogetherValidator
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -33,7 +31,6 @@ class TagSerializer(serializers.ModelSerializer):
         read_only_fields = ["id", "owner", "create_at"]
 
     def validate_name(self, name):
-        print("---validate tag name in se")
         request = self.context.get("request")
         existing_name = self.Meta.model.objects.filter(
             owner=request.user, name=name
@@ -52,40 +49,93 @@ class ListTagSerializer(serializers.ModelSerializer):
         fields = ["name"]
 
 
+class UrlCategorySerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Category
+        fields = ["id", "name"]
+        read_only_fields = ["id"]
+
+    def validate(self, attrs):
+        return super().validate(attrs)
+
+
 class FavoriteUrlSerializer(serializers.ModelSerializer):
 
-    # tags = TagSerializer(many=True)
+    url = serializers.URLField()
     tags = ListTagSerializer(many=True)
-    category = CategorySerializer()
+    category = UrlCategorySerializer()
 
     class Meta:
         model = FavoriteUrl
-        fields = ["url", "title", "owner", "tags", "category", "create_at"]
-        read_only_fields = ["create_at", "owner"]
+        fields = ["id", "url", "title", "owner", "tags", "category", "create_at"]
+        read_only_fields = ["id", "create_at", "owner"]
+
+    def validate_category(self, category: dict):
+        name = category.get("name")
+        if not name:
+            raise ValidationError("not found category name")
+
+        return category
 
     def validate(self, attrs):
+        from fav_link.processes import validity_check
 
-        tags = attrs["tags"]
-        print("---tags", tags)
-        # validate tags
+        request = self.context.get("request")
+
+        url = attrs["url"]
+        category = attrs["category"]
+
+        # validity check
+        try:
+            validity_check(url)
+        except Exception as error:
+            return ValidationError(str(error))
+
+        # validate category
+        instance = Category.objects.filter(
+            name=category["name"], owner=request.user
+        ).last()
+        if not instance:
+            raise ValidationError("not found category name")
+
+        print("  category instance", instance)
+        attrs["category"] = instance
 
         # raise ValidationError("error")
 
         return attrs
 
     def create(self, validated_data):  # create method
-        # tags = self.initial_data["tags"]
-        tags = validated_data.pop("tags")
+        from fav_link.processes import get_tag_instances
+
         request = self.context.get("request")
         user = request.user
 
         # get or create tag
-        tag_instances = []
-        for tag in tags:
-            tag, _ = Tag.objects.get_or_create(name=tag["name"], owner=user)
-            tag_instances.append(tag)
+        tags = validated_data.pop("tags")
+        tag_instances = get_tag_instances(tags, user)
 
         # create favorite url instance
-        fav_url = FavoriteUrl.objects.create(**validated_data, owner=user)
-        fav_url.tags.set(tag_instances)
-        return fav_url
+        instance = FavoriteUrl.objects.create(**validated_data, owner=user)
+        instance.tags.set(tag_instances)
+
+        return instance
+
+    def update(self, instance, validated_data):
+        from fav_link.processes import get_tag_instances
+
+        request = self.context.get("request")
+        user = request.user
+
+        # get or create tag
+        tags = validated_data.pop("tags")
+        tag_instances = get_tag_instances(tags, user)
+
+        # set updating value
+        for field, value in validated_data.items():
+            setattr(instance, field, value)
+
+        instance.tags.set(tag_instances)
+
+        return instance
