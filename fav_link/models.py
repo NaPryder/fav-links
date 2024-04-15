@@ -13,6 +13,9 @@ class Category(models.Model):
             "owner",
         )
 
+    def __str__(self) -> str:
+        return self.name
+
 
 class Tag(models.Model):
     name = models.SlugField(db_index=True, max_length=50)
@@ -25,12 +28,16 @@ class Tag(models.Model):
             "owner",
         )
 
+    def __str__(self) -> str:
+        return self.name
+
 
 # Create your models here.
 class FavoriteUrl(models.Model):
 
     owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name="+")
-    url = models.URLField()
+    url = models.URLField(unique=True)
+    title = models.CharField(max_length=200, null=True, blank=True)
     category = models.ForeignKey(
         Category,
         on_delete=models.PROTECT,
