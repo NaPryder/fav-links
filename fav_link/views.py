@@ -1,14 +1,12 @@
+from django.db import transaction
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated, BasePermission
-
 from django_filters.rest_framework import DjangoFilterBackend
 
-from fav_link.apps import UPDATING_QUEUES
 from fav_link.filtersets import FavoriteUrlFilter
 from fav_link.models import FavoriteUrl, Tag, Category
-from fav_link.processes import validity_check
 from fav_link.serializers import (
     FavoriteUrlSerializer,
     CategorySerializer,
@@ -29,6 +27,7 @@ class ManageTagViewSet(ModelViewSet):
     serializer_class = TagSerializer
     lookup_field = "name"
     pagination_class = None
+    permission_classes = [ObjectOwnerPermission]
 
     def filter_queryset(self, queryset):
         return queryset.filter(owner=self.request.user)
@@ -49,6 +48,7 @@ class ManageCategoryViewSet(ModelViewSet):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
     pagination_class = None
+    permission_classes = [ObjectOwnerPermission]
 
     def filter_queryset(self, queryset):
         return queryset.filter(owner=self.request.user)
@@ -68,67 +68,31 @@ class FavoriteUrlViewSet(ModelViewSet):
     filter_backends = [DjangoFilterBackend]
     filterset_class = FavoriteUrlFilter
 
+    def get_queryset(self):
+        return super().get_queryset()
+
     def filter_queryset(self, queryset):
-        return queryset.filter(owner=self.request.user)
-
-    # def create(self, request, *args, **kwargs):
-    #     serializer = self.get_serializer(data=request.data)
-    #     serializer.is_valid(raise_exception=True)
-
-    #     print("---validated dat", serializer.validated_data)
-    #     url = serializer.validated_data.get("url")
-    #     print("url", url)
-
-    #     self.perform_create(serializer)
-    #     headers = self.get_success_headers(serializer.data)
-
-    #     successful_message = dict(message="success", **serializer.data)
-    #     print("---successfull", successful_message)
-    #     return Response(
-    #         successful_message, status=status.HTTP_201_CREATED, headers=headers
-    #     )
+        if hasattr(self.request, "user"):
+            queryset = queryset.filter(owner=self.request.user)
+        return super().filter_queryset(queryset)
 
     def update(self, request, *args, **kwargs):
-        print("args", args)
-        print("kwargs", kwargs)
-        import time
 
-        # TODO process update
-        # try:
-        #     res = super().update(request, *args, **kwargs)
-
+        pk = kwargs.get("pk")
         partial = kwargs.pop("partial", False)
-        instance = self.get_object()
-        _id = instance.id
-        timestamp = time.time()
-        UPDATING_QUEUES.append(timestamp)
-        print("---current queue", UPDATING_QUEUES)
-        end = 0
-        while timestamp in UPDATING_QUEUES:
 
-            end += 1
-            time.sleep(0.5)
+        # select for update instance
+        with transaction.atomic():
+            instance = FavoriteUrl.objects.select_for_update().filter(id=pk).last()
 
-            if end == 15:
-                print("remove timestamp", timestamp)
-                UPDATING_QUEUES.remove(timestamp)
-                break
+            serializer = self.get_serializer(
+                instance, data=request.data, partial=partial
+            )
+            serializer.is_valid(raise_exception=True)
 
-        print("----process update", timestamp, _id)
+            self.perform_update(serializer)
 
-        print(" end UPDATING_QUEUES", UPDATING_QUEUES)
-        # serializer = self.get_serializer(instance, data=request.data, partial=partial)
-        # serializer.is_valid(raise_exception=True)
-        # self.perform_update(serializer)
+            if getattr(instance, "_prefetched_objects_cache", None):
+                instance._prefetched_objects_cache = {}
 
-        # if getattr(instance, '_prefetched_objects_cache', None):
-        #     # If 'prefetch_related' has been applied to a queryset, we need to
-        #     # forcibly invalidate the prefetch cache on the instance.
-        #     instance._prefetched_objects_cache = {}
-
-        # return Response(serializer.data)
-
-        # finally:
-        #     UPDATING_QUEUES.pop()
-
-        return Response("by pass")
+            return Response(serializer.data)
