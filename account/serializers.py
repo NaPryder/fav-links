@@ -76,7 +76,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ["url", "username", "password"]
+        fields = ["username", "password"]
 
     def validate_username(self, username):
         pattern = r"^(?![-._])(?!.*[_.-]{2})[\w.-]{8,20}(?<![-._])$"
