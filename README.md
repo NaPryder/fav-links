@@ -27,3 +27,19 @@ create superuser if dont have account
 ```
 python manage.py createsuperuser
 ```
+
+CLI
+
+execute in bash
+python manage.py executecli
+
+then need to login befor
+
+input format if need to parse parameters
+if want to process on "add" action with parameters url="https://www.google.com/" and title is Google
+
+you can type
+
+```
+add url="https://www.google.com/" title=Google category="Search Engine" tags=search,google,default-url
+```
