@@ -63,8 +63,9 @@ class UrlCategorySerializer(serializers.ModelSerializer):
 class FavoriteUrlSerializer(serializers.ModelSerializer):
 
     url = serializers.URLField()
-    tags = ListTagSerializer(many=True)
-    category = UrlCategorySerializer()
+    title = serializers.CharField(allow_null=True, allow_blank=True, required=False)
+    tags = ListTagSerializer(many=True, allow_null=True, required=False)
+    category = UrlCategorySerializer(allow_null=True, required=False)
 
     class Meta:
         model = FavoriteUrl
@@ -72,37 +73,40 @@ class FavoriteUrlSerializer(serializers.ModelSerializer):
         read_only_fields = ["id", "create_at", "owner"]
 
     def validate_category(self, category: dict):
+        if category is None:
+            return category
+
         name = category.get("name")
         if not name:
             raise ValidationError("not found category name")
 
         return category
 
-    def validate(self, attrs):
+    def validate_url(self, url):
         from fav_link.processes import validity_check
+
+        # validity check
+        if url:
+            try:
+                validity_check(url)
+            except Exception as error:
+                raise ValidationError(str(error))
+
+            if str(url).endswith("\\") or str(url).endswith("/"):
+                url = url[:-1]
+
+        return url
+
+    def validate(self, attrs):
 
         request = self.context.get("request")
 
-        url = attrs["url"]
-        category = attrs["category"]
-
-        # validity check
-        try:
-            validity_check(url)
-        except Exception as error:
-            return ValidationError(str(error))
+        category = attrs.get("category")
 
         # validate category
-        instance = Category.objects.filter(
-            name=category["name"], owner=request.user
-        ).last()
-        if not instance:
-            raise ValidationError("not found category name")
-
-        print("  category instance", instance)
-        attrs["category"] = instance
-
-        # raise ValidationError("error")
+        if isinstance(category, dict) and (name := category.get("name")):
+            instance, _ = Category.objects.get_or_create(name=name, owner=request.user)
+            attrs["category"] = instance
 
         return attrs
 
@@ -113,8 +117,10 @@ class FavoriteUrlSerializer(serializers.ModelSerializer):
         user = request.user
 
         # get or create tag
-        tags = validated_data.pop("tags")
-        tag_instances = get_tag_instances(tags, user)
+        tag_instances = []
+        if "tags" in validated_data:
+            tags = validated_data.pop("tags")
+            tag_instances = get_tag_instances(tags, user)
 
         # create favorite url instance
         instance = FavoriteUrl.objects.create(**validated_data, owner=user)
@@ -129,13 +135,15 @@ class FavoriteUrlSerializer(serializers.ModelSerializer):
         user = request.user
 
         # get or create tag
-        tags = validated_data.pop("tags")
-        tag_instances = get_tag_instances(tags, user)
+        if "tags" in validated_data:
+            tags = validated_data.pop("tags")
+            tag_instances = get_tag_instances(tags, user)
+            instance.tags.set(tag_instances)
 
         # set updating value
         for field, value in validated_data.items():
             setattr(instance, field, value)
 
-        instance.tags.set(tag_instances)
+        instance.save()
 
         return instance

@@ -1,4 +1,4 @@
-from fav_link.models import FavoriteUrl, Tag, Category
+from fav_link.models import Tag
 from rest_framework import status
 import requests
 
@@ -6,12 +6,13 @@ import requests
 def get_tag_instances(tags: list[dict], user):
 
     tag_instances = []
-    for tag in tags:
-        tag_name = tag.get("name")
-        if not tag_name:
-            continue
-        tag, _ = Tag.objects.get_or_create(name=tag_name, owner=user)
-        tag_instances.append(tag)
+    if tags:
+        for tag in tags:
+            tag_name = tag.get("name")
+            if not tag_name:
+                continue
+            tag, _ = Tag.objects.get_or_create(name=tag_name, owner=user)
+            tag_instances.append(tag)
 
     return tag_instances
 
