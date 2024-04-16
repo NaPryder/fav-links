@@ -47,7 +47,6 @@ class FavoriteUrl(models.Model):
     )
     tags = models.ManyToManyField(
         Tag,
-        null=True,
         blank=True,
     )
     create_at = models.DateTimeField(auto_now_add=True)
