@@ -1,11 +1,10 @@
 from django.db import transaction
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.response import Response
-from rest_framework.decorators import action
-from rest_framework.permissions import IsAuthenticated, BasePermission
+from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
 
-from fav_link.filtersets import FavoriteUrlFilter
+from fav_link.filtersets import CategoryFilter, FavoriteUrlFilter, TagFilter
 from fav_link.models import FavoriteUrl, Tag, Category
 from fav_link.serializers import (
     FavoriteUrlSerializer,
@@ -26,32 +25,30 @@ class ManageTagViewSet(ModelViewSet):
     queryset = Tag.objects.all()
     serializer_class = TagSerializer
     lookup_field = "name"
-    pagination_class = None
     permission_classes = [ObjectOwnerPermission]
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = TagFilter
 
     def filter_queryset(self, queryset):
-        return queryset.filter(owner=self.request.user)
+        if hasattr(self.request, "user"):
+            queryset = queryset.filter(owner=self.request.user)
+        return super().filter_queryset(queryset)
 
     def perform_create(self, serializer):
         return serializer.save(owner=self.request.user)
-
-    @action(["GET"], detail=False)
-    def add_sample(self, request):
-        data = {"name": "sample-1", "owner": request.user.id}
-        serializer = TagSerializer(data=data)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response(dict(success=True, **serializer.data))
 
 
 class ManageCategoryViewSet(ModelViewSet):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
-    pagination_class = None
     permission_classes = [ObjectOwnerPermission]
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = CategoryFilter
 
     def filter_queryset(self, queryset):
-        return queryset.filter(owner=self.request.user)
+        if hasattr(self.request, "user"):
+            queryset = queryset.filter(owner=self.request.user)
+        return super().filter_queryset(queryset)
 
     def perform_create(self, serializer):
         return serializer.save(owner=self.request.user)
