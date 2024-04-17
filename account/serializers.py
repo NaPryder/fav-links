@@ -2,64 +2,15 @@ from django.contrib.auth.models import User
 import django.contrib.auth.password_validation as validators
 from rest_framework import serializers
 from rest_framework.validators import ValidationError
-from django.contrib.auth import login, logout, authenticate
+from django.contrib.auth import authenticate
 import re
 
 
 class UserInfoSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        # fields = ["url", "username", "password", "is_staff"]
-        # read_only_fields = ["url", "is_staff"]
         fields = ["username", "is_staff", "email"]
         read_only_fields = fields
-
-
-class UserChangePasswordSerializer(serializers.ModelSerializer):
-
-    username = serializers.CharField(
-        max_length=20, min_length=8, help_text="must be between 8 and 20 characters"
-    )
-    old_password = serializers.CharField(
-        max_length=20,
-        min_length=8,
-        write_only=True,
-    )
-    new_password = serializers.CharField(
-        max_length=20,
-        min_length=8,
-        help_text="must be between 8 and 20 characters",
-        write_only=True,
-    )
-    new_password_2 = serializers.CharField(
-        max_length=20,
-        min_length=8,
-        help_text="must be same as New password",
-        write_only=True,
-    )
-
-    class Meta:
-        model = User
-        fields = ["username", "old_password", "new_password", "new_password_2"]
-        read_only_fields = ["username"]
-
-    def validate_old_password(self, password):
-        validators.validate_password(password)
-        return password
-
-    def validate_new_password(self, password):
-        validators.validate_password(password)
-        return password
-
-    def validate_new_password_2(self, password):
-        validators.validate_password(password)
-        return password
-
-    def validate(self, attrs):
-        print("---validate all")
-        raise ValidationError("test")
-
-        return attrs
 
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
@@ -80,7 +31,6 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 
     def validate_username(self, username):
         pattern = r"^(?![-._])(?!.*[_.-]{2})[\w.-]{8,20}(?<![-._])$"
-        #     raise ValidationError("U")
         if re.match(pattern, username) is None:
             raise ValidationError("Invalid username.")
 

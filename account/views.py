@@ -2,7 +2,6 @@ from django.contrib.auth.models import User
 from django.contrib.auth import login, logout
 
 from account.serializers import (
-    UserChangePasswordSerializer,
     UserInfoSerializer,
     SessionLoginSerializer,
     UserRegistrationSerializer,
@@ -21,6 +20,7 @@ from django.views.decorators.cache import never_cache
 from django.views.decorators.csrf import csrf_protect, ensure_csrf_cookie
 
 from account.permissions import UserOwnerInfoPermission
+from rest_framework import status
 
 
 class UserRegistrationViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
@@ -28,7 +28,6 @@ class UserRegistrationViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
     serializer_class = UserRegistrationSerializer
 
 
-# ViewSets define the view behavior.
 class UserViewSet(viewsets.GenericViewSet, mixins.RetrieveModelMixin):
     queryset = User.objects.all()
     serializer_class = UserInfoSerializer
@@ -40,24 +39,14 @@ class UserViewSet(viewsets.GenericViewSet, mixins.RetrieveModelMixin):
     @method_decorator(ensure_csrf_cookie)
     def list(self, request, *args, **kwargs):
         if (user := request.user).is_authenticated:
-            return Response([self.get_serializer(user).data])
+            return Response(self.get_serializer(user).data)
         else:
-            return Response()
-
-
-class UserChangePasswordViewSet(viewsets.GenericViewSet, mixins.UpdateModelMixin):
-    queryset = User.objects.all()
-    serializer_class = UserChangePasswordSerializer
-    permission_classes = [UserOwnerInfoPermission]
-
-    # def update(self, request, *args, **kwargs):
-    #     print("-=--update", request)
-    #     return Response("update")
+            return Response("Fail", status=status.HTTP_400_BAD_REQUEST)
 
 
 class LoginViewSet(viewsets.GenericViewSet):
     serializer_class = SessionLoginSerializer
-    permission_classes = []
+    permission_classes = [AllowAny]
 
     @method_decorator(never_cache)
     @method_decorator(csrf_protect)
