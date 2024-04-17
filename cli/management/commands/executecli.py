@@ -1,7 +1,5 @@
 from django.core.management import BaseCommand
 from django.contrib.auth import authenticate
-from django.contrib.auth.models import User
-
 
 from cli.extract_prompts import extract_input, get_command_help_texts
 from fav_link.command_actions import CommandActions
@@ -24,7 +22,6 @@ def process_authenticate():
         password = input("Enter [password]: ").strip()
 
         current_user = authenticate(username=username, password=password)
-        print("--login user", current_user)
 
         if not current_user:
             print("Invalid user.")
@@ -47,11 +44,8 @@ class Command(BaseCommand):
         print(CommandActions._commands)
         argparse.ArgumentParser()
 
-        # by pass auth
-        # current_user = process_authenticate()
-        current_user = User.objects.get(username="root")
-
-        print("  current user", current_user)
+        current_user = process_authenticate()
+        # current_user = User.objects.get(username="root")
 
         commands = CommandActions(user=current_user)
 
@@ -84,7 +78,3 @@ class Command(BaseCommand):
 
             finally:
                 print()
-
-            # get_command_method()
-
-        # print("--end")
