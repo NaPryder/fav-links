@@ -1,11 +1,8 @@
 from cli.decorators import class_register_commands, register_command
-from fav_link.models import FavoriteUrl, Tag, Category
-from fav_link.processes import get_tag_instances, validity_check
+from fav_link.models import FavoriteUrl
 from fav_link.serializers import FavoriteUrlSerializer
 
 from django.db import transaction
-from django.contrib.auth.models import User
-from dataclasses import dataclass
 
 
 class DummyRequest:
