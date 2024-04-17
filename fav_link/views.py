@@ -1,24 +1,16 @@
 from django.db import transaction
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
 
 from fav_link.filtersets import CategoryFilter, FavoriteUrlFilter, TagFilter
 from fav_link.models import FavoriteUrl, Tag, Category
+from fav_link.permissions import ObjectOwnerPermission
 from fav_link.serializers import (
     FavoriteUrlSerializer,
     CategorySerializer,
     TagSerializer,
 )
-
-
-class ObjectOwnerPermission(IsAuthenticated):
-    def has_object_permission(self, request, view, obj):
-        if hasattr(obj, "owner"):
-            return obj.owner == request.user
-
-        return False
 
 
 class ManageTagViewSet(ModelViewSet):
