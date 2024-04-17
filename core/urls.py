@@ -17,11 +17,18 @@ Including another URLconf
 
 from django.contrib import admin
 from django.urls import include, path
+from django.http import JsonResponse
+from django.middleware.csrf import get_token
+
+
+# auth get token
+def csrf(request):
+    return JsonResponse({"csrfToken": get_token(request)})
+
 
 urlpatterns = [
     path("admin/", admin.site.urls),
-    # path("api-auth/", include("rest_framework.urls", namespace="rest_framework")),
+    path("csrf/", csrf),
     path("api/account/", include("account.urls"), name="account"),
     path("api/fav-link/", include("fav_link.urls"), name="urls"),
-    # path("api/", include(account_router.urls)),
 ]
