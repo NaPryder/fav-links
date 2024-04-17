@@ -4,8 +4,6 @@ from django.contrib.auth import authenticate
 from cli.extract_prompts import extract_input, get_command_help_texts
 from fav_link.command_actions import CommandActions
 
-import argparse
-
 
 def check_exit_command(message: str):
     if message.lower().startswith("exit"):
@@ -40,9 +38,8 @@ class Command(BaseCommand):
     help = "Start CLI"
 
     def handle(self, *args, **options):
-        print(CommandActions._help_commands)
-        print(CommandActions._commands)
-        argparse.ArgumentParser()
+        # print(CommandActions._help_commands)
+        # print(CommandActions._commands)
 
         current_user = process_authenticate()
         # current_user = User.objects.get(username="root")
