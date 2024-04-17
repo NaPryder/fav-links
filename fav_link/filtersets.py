@@ -1,7 +1,25 @@
 from django_filters.filters import CharFilter, DateTimeFilter
 from django_filters import FilterSet
 
-from fav_link.models import FavoriteUrl
+from fav_link.models import FavoriteUrl, Tag, Category
+
+
+class TagFilter(FilterSet):
+
+    name = CharFilter(field_name="name", lookup_expr="icontains")
+
+    class Meta:
+        model = Tag
+        fields = {}
+
+
+class CategoryFilter(FilterSet):
+
+    name = CharFilter(field_name="name", lookup_expr="icontains")
+
+    class Meta:
+        model = Category
+        fields = {}
 
 
 class FavoriteUrlFilter(FilterSet):
